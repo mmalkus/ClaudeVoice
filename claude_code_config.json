@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "claude-voice": {
+      "command": "node",
+      "args": [
+        "C:/path/to/ClaudeVoice/ClaudeVoiceApp/MCPServer/server.js"
+      ],
+      "description": "Local voice transcription using Whisper AI"
+    }
+  }
+}
