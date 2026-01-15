@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ClaudeVoice.MainPage"
+             Title="Claude Voice Transcription"
+             BackgroundColor="#F5F5F5">
+
+    <Grid RowDefinitions="Auto,*,Auto" Padding="0">
+
+        <!-- Header -->
+        <Frame Grid.Row="0"
+               BackgroundColor="#2C3E50"
+               Padding="20"
+               CornerRadius="0"
+               HasShadow="True">
+            <VerticalStackLayout Spacing="5">
+                <Label Text="Claude Voice Transcription"
+                       TextColor="White"
+                       FontSize="28"
+                       FontAttributes="Bold"
+                       HorizontalOptions="Center"/>
+                <Label x:Name="StatusLabel"
+                       Text="Ready to record"
+                       TextColor="#BDC3C7"
+                       FontSize="14"
+                       HorizontalOptions="Center"/>
+            </VerticalStackLayout>
+        </Frame>
+
+        <!-- Transcription Display -->
+        <ScrollView Grid.Row="1" Padding="10">
+            <VerticalStackLayout x:Name="TranscriptionContainer" Spacing="5">
+                <Frame BackgroundColor="White"
+                       Padding="15"
+                       CornerRadius="10"
+                       HasShadow="True">
+                    <FlexLayout x:Name="TranscriptionPanel"
+                                Wrap="Wrap"
+                                JustifyContent="Start"
+                                AlignItems="Start"
+                                AlignContent="Start">
+                        <!-- Words will be added here dynamically -->
+                    </FlexLayout>
+                </Frame>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- Control Panel -->
+        <Frame Grid.Row="2"
+               BackgroundColor="White"
+               Padding="15"
+               CornerRadius="0"
+               HasShadow="True">
+            <Grid ColumnDefinitions="*,*,*,Auto" ColumnSpacing="10">
+
+                <Button x:Name="RecordButton"
+                        Text="🎙️ Record"
+                        Grid.Column="0"
+                        BackgroundColor="#27AE60"
+                        TextColor="White"
+                        Clicked="OnRecordClicked"
+                        HeightRequest="50"/>
+
+                <Button x:Name="StopButton"
+                        Text="⏹️ Stop"
+                        Grid.Column="1"
+                        BackgroundColor="#E74C3C"
+                        TextColor="White"
+                        IsEnabled="False"
+                        Clicked="OnStopClicked"
+                        HeightRequest="50"/>
+
+                <Button x:Name="ClearButton"
+                        Text="🗑️ Clear"
+                        Grid.Column="2"
+                        BackgroundColor="#95A5A6"
+                        TextColor="White"
+                        Clicked="OnClearClicked"
+                        HeightRequest="50"/>
+
+                <HorizontalStackLayout Grid.Column="3"
+                                       Spacing="5"
+                                       VerticalOptions="Center"
+                                       Padding="10,0,0,0">
+                    <Label Text="MCP:"
+                           VerticalOptions="Center"
+                           FontSize="12"/>
+                    <Frame x:Name="McpStatusIndicator"
+                           WidthRequest="12"
+                           HeightRequest="12"
+                           CornerRadius="6"
+                           Padding="0"
+                           HasShadow="False"
+                           BackgroundColor="#E74C3C"
+                           VerticalOptions="Center"/>
+                    <Label x:Name="McpStatusLabel"
+                           Text="Offline"
+                           VerticalOptions="Center"
+                           FontSize="12"
+                           TextColor="#7F8C8D"/>
+                </HorizontalStackLayout>
+            </Grid>
+        </Frame>
+    </Grid>
+
+</ContentPage>

@@ -27,7 +27,7 @@ Make sure you have these installed:
    This will:
    - Install Python dependencies (Flask, faster-whisper)
    - Install Node.js dependencies (MCP SDK)
-   - Build the WPF application
+   - Build the MAUI application for Windows
 
 3. **Start the application**
    ```bash
@@ -39,7 +39,8 @@ That's it! The application will start with all services running.
 ## First Use
 
 1. **Record Audio**
-   - Click the "🎙️ Start Recording" button
+   - Click the "🎙️ Record" button
+   - Grant microphone permission if prompted (first time only)
    - Speak clearly into your microphone
    - Click "⏹️ Stop" when done
 

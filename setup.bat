@@ -57,12 +57,12 @@ if errorlevel 1 (
 cd ..\..
 
 echo.
-echo [4/4] Building WPF application...
-cd ClaudeVoiceApp\WpfApp
+echo [4/4] Building MAUI application...
+cd ClaudeVoiceApp\MauiApp
 dotnet restore
-dotnet build
+dotnet build -f net8.0-windows10.0.19041.0
 if errorlevel 1 (
-    echo ERROR: Failed to build WPF application
+    echo ERROR: Failed to build MAUI application
     pause
     exit /b 1
 )
@@ -76,7 +76,7 @@ echo.
 echo To run the application:
 echo   1. Run: run.bat
 echo   OR
-echo   2. Open ClaudeVoiceApp\WpfApp\ClaudeVoice.csproj in Visual Studio and press F5
+echo   2. Open ClaudeVoiceApp\MauiApp\ClaudeVoice.csproj in Visual Studio 2022 and press F5
 echo.
 echo To integrate with Claude Code:
 echo   Add this to your Claude Code MCP configuration:

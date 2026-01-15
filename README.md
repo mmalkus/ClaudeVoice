@@ -1,6 +1,8 @@
-# Claude Voice - AI Voice Transcription for Windows
+# Claude Voice - AI Voice Transcription
 
-A Windows desktop application that provides local voice-to-text transcription using OpenAI's Whisper model, with seamless integration into Claude Code via MCP (Model Context Protocol).
+A cross-platform desktop and mobile application that provides local voice-to-text transcription using OpenAI's Whisper model, with seamless integration into Claude Code via MCP (Model Context Protocol).
+
+Supports Windows, macOS, iOS, and Android.
 
 ## Features
 
@@ -18,9 +20,15 @@ A Windows desktop application that provides local voice-to-text transcription us
 
 ```
 ClaudeVoiceApp/
-├── WpfApp/              # Windows WPF application (C#)
-│   ├── MainWindow.xaml  # UI layout
-│   └── MainWindow.xaml.cs # Application logic
+├── MauiApp/             # .NET MAUI cross-platform app (C#)
+│   ├── MainPage.xaml    # UI layout
+│   ├── MainPage.xaml.cs # Application logic
+│   ├── Services/        # Audio recording & transcription services
+│   ├── Models/          # Data models
+│   └── Platforms/       # Platform-specific implementations
+│       ├── Windows/     # Windows-specific audio recording (NAudio)
+│       ├── MacCatalyst/ # macOS-specific audio recording (AVFoundation)
+│       └── Android/     # Android-specific audio recording (MediaRecorder)
 ├── PythonBackend/       # Whisper transcription service
 │   └── whisper_server.py # Flask API server
 ├── MCPServer/           # Model Context Protocol server
@@ -30,8 +38,11 @@ ClaudeVoiceApp/
 
 ## Requirements
 
-### For the WPF Application:
-- Windows 10 or later
+### For the MAUI Application:
+- **Windows**: Windows 10 version 1809 or later
+- **macOS**: macOS 10.15 or later
+- **iOS**: iOS 11.0 or later
+- **Android**: Android 5.0 (API 21) or later
 - .NET 8.0 SDK or later
 - Microphone access
 
@@ -65,26 +76,45 @@ cd ClaudeVoiceApp/MCPServer
 npm install
 ```
 
-### 4. Build the WPF Application
+### 4. Build the MAUI Application
 
 ```bash
-cd ClaudeVoiceApp/WpfApp
-dotnet restore
-dotnet build
+cd ClaudeVoiceApp/MauiApp
+
+# For Windows
+dotnet build -f net8.0-windows10.0.19041.0
+
+# For macOS
+dotnet build -f net8.0-maccatalyst
+
+# For Android
+dotnet build -f net8.0-android
+
+# For iOS (requires macOS with Xcode)
+dotnet build -f net8.0-ios
 ```
 
 ## Usage
 
 ### Running the Application
 
-#### Option 1: Run from Visual Studio
-1. Open `ClaudeVoiceApp/WpfApp/ClaudeVoice.csproj` in Visual Studio
-2. Press F5 to build and run
+#### Option 1: Run from Visual Studio 2022 (Windows/macOS)
+1. Open `ClaudeVoiceApp/MauiApp/ClaudeVoice.csproj` in Visual Studio 2022
+2. Select your target platform (Windows Machine, Android Emulator, iOS Simulator, etc.)
+3. Press F5 to build and run
 
 #### Option 2: Run from command line
 ```bash
-cd ClaudeVoiceApp/WpfApp
-dotnet run
+cd ClaudeVoiceApp/MauiApp
+
+# For Windows
+dotnet run -f net8.0-windows10.0.19041.0
+
+# For macOS
+dotnet run -f net8.0-maccatalyst
+
+# For Android (with device/emulator connected)
+dotnet run -f net8.0-android
 ```
 
 The application will automatically:
@@ -94,11 +124,12 @@ The application will automatically:
 
 ### Using the App
 
-1. **Start Recording**: Click "🎙️ Start Recording" and speak into your microphone
+1. **Start Recording**: Click "🎙️ Record" and speak into your microphone
+   - First time: You'll be prompted to grant microphone permission
 2. **Stop & Transcribe**: Click "⏹️ Stop" to end recording and begin transcription
-3. **Edit Words**: Click on any word in the transcription to edit it
-   - Press Enter to save changes
-   - Press Escape to cancel
+3. **Edit Words**: Tap/click on any word in the transcription to edit it
+   - Enter your correction in the dialog
+   - Tap "Save" to apply changes or "Cancel" to dismiss
 4. **Clear**: Click "🗑️ Clear" to remove the current transcription
 
 ### Integrating with Claude Code
@@ -173,8 +204,11 @@ model = WhisperModel("tiny", device="cuda", compute_type="float16")
 - Check that all dependencies are installed: `pip install -r requirements.txt`
 - Manually start the backend to see errors: `python PythonBackend/whisper_server.py`
 
-### "No microphone detected"
-- Check Windows privacy settings to ensure microphone access is enabled
+### "No microphone detected" or "Permission denied"
+- **Windows**: Check Windows Settings → Privacy → Microphone
+- **macOS**: Check System Preferences → Security & Privacy → Microphone
+- **iOS**: Check Settings → Privacy → Microphone → Claude Voice
+- **Android**: Check Settings → Apps → Claude Voice → Permissions → Microphone
 - Verify your microphone is working in other applications
 
 ### "MCP Server offline"
@@ -191,9 +225,14 @@ model = WhisperModel("tiny", device="cuda", compute_type="float16")
 
 ### Project Structure
 
-- **WpfApp**: C# WPF application using .NET 8.0
-  - NAudio for audio recording
+- **MauiApp**: C# .NET MAUI application using .NET 8.0
+  - Cross-platform UI with XAML
+  - Platform-specific audio recording implementations:
+    - Windows: NAudio
+    - macOS/iOS: AVFoundation
+    - Android: MediaRecorder
   - HttpClient for communication with Python backend
+  - Community Toolkit for MAUI
 
 - **PythonBackend**: Flask REST API
   - faster-whisper for optimized transcription
@@ -206,11 +245,26 @@ model = WhisperModel("tiny", device="cuda", compute_type="float16")
 ### Building for Release
 
 ```bash
-cd ClaudeVoiceApp/WpfApp
-dotnet publish -c Release -r win-x64 --self-contained
+cd ClaudeVoiceApp/MauiApp
+
+# Windows
+dotnet publish -f net8.0-windows10.0.19041.0 -c Release
+
+# macOS
+dotnet publish -f net8.0-maccatalyst -c Release
+
+# Android (creates APK)
+dotnet publish -f net8.0-android -c Release
+
+# iOS (requires macOS with Xcode and signing certificates)
+dotnet publish -f net8.0-ios -c Release
 ```
 
-The executable will be in `bin/Release/net8.0-windows/win-x64/publish/`
+Output locations:
+- Windows: `bin/Release/net8.0-windows10.0.19041.0/publish/`
+- macOS: `bin/Release/net8.0-maccatalyst/publish/`
+- Android: `bin/Release/net8.0-android/publish/`
+- iOS: `bin/Release/net8.0-ios/publish/`
 
 ## License
 
@@ -221,4 +275,6 @@ MIT License - See LICENSE file for details
 - [OpenAI Whisper](https://github.com/openai/whisper) - Speech recognition model
 - [faster-whisper](https://github.com/guillaumekln/faster-whisper) - Optimized Whisper implementation
 - [Model Context Protocol](https://modelcontextprotocol.io/) - Claude Code integration standard
-- [NAudio](https://github.com/naudio/NAudio) - Audio recording library
+- [.NET MAUI](https://dotnet.microsoft.com/apps/maui) - Cross-platform framework
+- [NAudio](https://github.com/naudio/NAudio) - Windows audio recording library
+- [CommunityToolkit.Maui](https://github.com/CommunityToolkit/Maui) - MAUI community extensions
