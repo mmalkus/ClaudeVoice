@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Voice - Live Transcription</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #00d4ff, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: #888;
+            margin-bottom: 30px;
+        }
+
+        .settings {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .setting-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .setting-label {
+            font-size: 0.75rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        select {
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 1rem;
+            cursor: pointer;
+            min-width: 180px;
+        }
+
+        select:hover {
+            border-color: #00d4ff;
+        }
+
+        select option {
+            background: #1a1a2e;
+            color: #fff;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #666;
+            transition: background 0.3s;
+        }
+
+        .status-dot.connected {
+            background: #00ff88;
+            box-shadow: 0 0 10px #00ff88;
+        }
+
+        .status-dot.recording {
+            background: #ff4444;
+            box-shadow: 0 0 10px #ff4444;
+            animation: pulse 1s infinite;
+        }
+
+        .status-dot.loading {
+            background: #ffaa00;
+            box-shadow: 0 0 10px #ffaa00;
+            animation: pulse 0.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .record-btn {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 4px solid #444;
+            background: linear-gradient(145deg, #2a2a4a, #1a1a3a);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            margin-bottom: 40px;
+        }
+
+        .record-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            border-color: #00d4ff;
+        }
+
+        .record-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .record-btn.recording {
+            border-color: #ff4444;
+            animation: pulse-border 1s infinite;
+        }
+
+        @keyframes pulse-border {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 0 20px rgba(255, 68, 68, 0); }
+        }
+
+        .record-icon {
+            width: 40px;
+            height: 40px;
+            background: #ff4444;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        .record-btn.recording .record-icon {
+            border-radius: 4px;
+            width: 30px;
+            height: 30px;
+        }
+
+        .transcription-box {
+            width: 100%;
+            max-width: 800px;
+            min-height: 200px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .transcription-label {
+            font-size: 0.8rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+        }
+
+        .transcription-text {
+            font-size: 1.4rem;
+            line-height: 1.8;
+            min-height: 100px;
+        }
+
+        .word {
+            display: inline;
+            transition: all 0.2s;
+        }
+
+        .word.final {
+            color: #fff;
+        }
+
+        .word.partial {
+            color: #888;
+            font-style: italic;
+        }
+
+        .word.new {
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .controls {
+            display: flex;
+            gap: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        .btn-clear {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        .btn-clear:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .btn-copy {
+            background: #00d4ff;
+            color: #000;
+        }
+
+        .btn-copy:hover {
+            background: #00b8e6;
+        }
+
+        .info {
+            margin-top: 40px;
+            color: #666;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .info code {
+            background: rgba(255,255,255,0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .model-info {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Claude Voice</h1>
+    <p class="subtitle">Real-time Speech Transcription</p>
+
+    <div class="settings">
+        <div class="setting-group">
+            <span class="setting-label">Language</span>
+            <select id="languageSelect">
+                <option value="en-us">English (US)</option>
+                <option value="en-in">English (Indian)</option>
+                <option value="de">German (Deutsch)</option>
+                <option value="es">Spanish (Espanol)</option>
+                <option value="fr">French (Francais)</option>
+                <option value="it">Italian (Italiano)</option>
+                <option value="nl">Dutch (Nederlands)</option>
+                <option value="pt">Portuguese (Portugues)</option>
+                <option value="ru">Russian</option>
+                <option value="zh">Chinese (Mandarin)</option>
+                <option value="ja">Japanese</option>
+                <option value="ko">Korean</option>
+                <option value="tr">Turkish</option>
+                <option value="pl">Polish</option>
+                <option value="uk">Ukrainian</option>
+                <option value="hi">Hindi</option>
+                <option value="ar">Arabic</option>
+            </select>
+            <span class="model-info" id="modelInfo">Model: vosk-model-small-en-us</span>
+        </div>
+    </div>
+
+    <div class="status">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Connecting...</span>
+    </div>
+
+    <button class="record-btn" id="recordBtn" disabled>
+        <div class="record-icon"></div>
+    </button>
+
+    <div class="transcription-box">
+        <div class="transcription-label">Transcription</div>
+        <div class="transcription-text" id="transcription"></div>
+    </div>
+
+    <div class="controls">
+        <button class="btn btn-clear" id="clearBtn">Clear</button>
+        <button class="btn btn-copy" id="copyBtn">Copy Text</button>
+    </div>
+
+    <div class="info">
+        <p>Click the button to start/stop recording. Words appear as you speak.</p>
+        <p style="margin-top: 10px;">Powered by <code>Vosk</code> (streaming) + <code>Whisper</code> (batch)</p>
+    </div>
+
+    <script>
+        const socket = io();
+        const recordBtn = document.getElementById('recordBtn');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const transcription = document.getElementById('transcription');
+        const clearBtn = document.getElementById('clearBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const languageSelect = document.getElementById('languageSelect');
+        const modelInfo = document.getElementById('modelInfo');
+
+        let isRecording = false;
+        let mediaStream = null;
+        let audioContext = null;
+        let processor = null;
+        let finalWords = [];
+        let partialText = '';
+        let currentLanguage = 'en-us';
+
+        // Language select handler
+        languageSelect.addEventListener('change', async (e) => {
+            const lang = e.target.value;
+            currentLanguage = lang;
+            modelInfo.textContent = `Model: vosk-model-small-${lang}`;
+
+            // If recording, stop first and wait
+            if (isRecording) {
+                stopRecording();
+                // Wait for audio to fully stop
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            // Notify server to change model
+            statusDot.classList.add('loading');
+            statusText.textContent = 'Loading model...';
+            recordBtn.disabled = true;
+
+            // Small delay to ensure no audio is in flight
+            await new Promise(resolve => setTimeout(resolve, 100));
+            socket.emit('set_language', { language: lang });
+        });
+
+        // Socket events
+        socket.on('connect', () => {
+            statusDot.classList.add('connected');
+            statusText.textContent = 'Connected - Click to record';
+            recordBtn.disabled = false;
+        });
+
+        socket.on('disconnect', () => {
+            statusDot.classList.remove('connected');
+            statusText.textContent = 'Disconnected';
+            recordBtn.disabled = true;
+            stopRecording();
+        });
+
+        socket.on('connected', (data) => {
+            console.log('Server ready:', data);
+            if (data.language) {
+                languageSelect.value = data.language;
+                currentLanguage = data.language;
+                modelInfo.textContent = `Model: vosk-model-small-${data.language}`;
+            }
+        });
+
+        socket.on('language_changed', (data) => {
+            console.log('Language changed:', data);
+            statusDot.classList.remove('loading');
+            statusDot.classList.add('connected');
+            statusText.textContent = 'Connected - Click to record';
+            recordBtn.disabled = false;
+
+            if (data.error) {
+                alert(`Error loading model: ${data.error}\nFalling back to English.`);
+                languageSelect.value = 'en-us';
+                modelInfo.textContent = 'Model: vosk-model-small-en-us';
+            } else {
+                modelInfo.textContent = `Model: ${data.model || 'vosk-model-small-' + data.language}`;
+            }
+        });
+
+        socket.on('word', (data) => {
+            console.log('Final word:', data.word);
+            finalWords.push(data.word);
+            partialText = '';
+            updateTranscription();
+        });
+
+        socket.on('partial', (data) => {
+            console.log('Partial:', data.word);
+            partialText = data.text;
+            updateTranscription();
+        });
+
+        socket.on('transcription_complete', (data) => {
+            console.log('Complete:', data.text);
+            partialText = '';
+            updateTranscription();
+        });
+
+        function updateTranscription() {
+            let html = '';
+
+            // Final words
+            finalWords.forEach((word, i) => {
+                const isNew = i === finalWords.length - 1;
+                html += `<span class="word final ${isNew ? 'new' : ''}">${word} </span>`;
+            });
+
+            // Partial text (words being formed)
+            if (partialText) {
+                const partialWords = partialText.split(' ');
+                const startIdx = finalWords.length;
+                partialWords.slice(startIdx).forEach(word => {
+                    if (word) {
+                        html += `<span class="word partial">${word} </span>`;
+                    }
+                });
+            }
+
+            transcription.innerHTML = html || '<span style="color: #666">Start speaking...</span>';
+        }
+
+        // Recording
+        recordBtn.addEventListener('click', () => {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        });
+
+        async function startRecording() {
+            try {
+                mediaStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        sampleRate: 16000,
+                        channelCount: 1,
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    }
+                });
+
+                audioContext = new AudioContext({ sampleRate: 16000 });
+                const source = audioContext.createMediaStreamSource(mediaStream);
+
+                // Create script processor for raw audio access
+                processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+                processor.onaudioprocess = (e) => {
+                    if (!isRecording) return;
+
+                    const inputData = e.inputBuffer.getChannelData(0);
+                    // Convert float32 to int16
+                    const int16Data = new Int16Array(inputData.length);
+                    for (let i = 0; i < inputData.length; i++) {
+                        int16Data[i] = Math.max(-32768, Math.min(32767, inputData[i] * 32768));
+                    }
+
+                    // Send to server
+                    socket.emit('audio_chunk', { audio: Array.from(new Uint8Array(int16Data.buffer)) });
+                };
+
+                source.connect(processor);
+                processor.connect(audioContext.destination);
+
+                isRecording = true;
+                recordBtn.classList.add('recording');
+                statusDot.classList.add('recording');
+                statusText.textContent = 'Recording...';
+
+            } catch (err) {
+                console.error('Error starting recording:', err);
+                alert('Could not access microphone. Please allow microphone access.');
+            }
+        }
+
+        function stopRecording() {
+            isRecording = false;
+            recordBtn.classList.remove('recording');
+            statusDot.classList.remove('recording');
+            statusText.textContent = 'Connected - Click to record';
+
+            if (processor) {
+                processor.disconnect();
+                processor = null;
+            }
+
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream = null;
+            }
+
+            socket.emit('end_stream');
+        }
+
+        // Controls
+        clearBtn.addEventListener('click', () => {
+            finalWords = [];
+            partialText = '';
+            updateTranscription();
+        });
+
+        copyBtn.addEventListener('click', () => {
+            const text = finalWords.join(' ');
+            navigator.clipboard.writeText(text).then(() => {
+                copyBtn.textContent = 'Copied!';
+                setTimeout(() => {
+                    copyBtn.textContent = 'Copy Text';
+                }, 2000);
+            });
+        });
+
+        // Initialize
+        updateTranscription();
+    </script>
+</body>
+</html>

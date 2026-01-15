@@ -35,14 +35,26 @@ if errorlevel 1 (
 echo   Node.js: Found
 
 echo.
-echo [2/4] Installing Python dependencies...
+echo [2/4] Setting up Python virtual environment...
 cd ClaudeVoiceApp\PythonBackend
+if not exist "venv" (
+    echo   Creating virtual environment...
+    py -3.13 -m venv venv
+    if errorlevel 1 (
+        py -3 -m venv venv
+    )
+)
+echo   Upgrading pip...
+call venv\Scripts\activate.bat
+python -m pip install --upgrade pip setuptools wheel >nul 2>&1
+echo   Installing dependencies...
 pip install -r requirements.txt
 if errorlevel 1 (
     echo ERROR: Failed to install Python dependencies
     pause
     exit /b 1
 )
+call deactivate
 cd ..\..
 
 echo.
